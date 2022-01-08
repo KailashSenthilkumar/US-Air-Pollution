@@ -1,0 +1,414 @@
+---
+title: "IE6600_Sec05_Group15_Hackathon"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+#GROUP MEMBERS:
+KAILASH SENTHILKUMAR
+PRAVEEN MANOHARAN
+SIDDARTH SIVASUBRAMANIAN
+
+#CONTRIBUTION : ALL MEMBERS CONTRIBUTED EQUALLY. EACH AND EVERY WAS DISCUSSED AND DONE.
+
+```{r}
+#Introduction and Problem statement:
+
+#EPA(Environmental Protection Agency) conducts research that provides the critical science to develop and implement Clean Air Act regulations that protect the quality of the air we breathe.
+#The research on the environmental impacts of air quality supports the National Ambient Air Quality Standards (NAAQS), set under the Clean Air Act regulations that protect the quality of the air we breathe.Here in our dataset we have the four major hazardous gases(NitrogenDioxide(NO2),CarbonMonoxide(CO),Ozone(O3),Sulphur Dioxide(SO2) that contribute to the air pollution.
+#We have the NAAQS Set standards for all these four gases and also with the help of the Air Quality Index we would be measuring the quality of air suitable for the living.Standards provide public health protection, including protecting the health of "sensitive" populations such as asthmatics, children, and the elderly, damage to animals, crops, vegetation, and buildings.
+
+#From data sets air pollution in US from 2000 to 2016 we can fetch different set of insights.Within these 17 years we can find top five states and the major contributing cities in those states that was comparatively more affected due to the specific type of gases.Secondly, with these data sets we could find the average  AQI of different gases in different states within these 17 years with which we could find the quality of air.From this AQI plot we can find that the air pollution is controlled by the EPA as the graph has a steep decline for all the four gas AQI from 2000 to 2016.Another interesting insight is that among the four gas which has the highest contribution for the AQI.Also we can find that there are some top sates that contribute to the major air pollution butremains safe given the values are taken annually. However there are some outliers even for these sates indicating that some days the AQI Value has reached above the safe levels making the air more polluted one. Finally,there is a positive correlation for the gases So2 and CO during the winter and there is a negative correlation for the gases No2 and O3 during the winter.
+
+
+```
+
+
+```{r,echo=FALSE}
+#Loading the Libraries
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(tidyr)
+library(lubridate)
+library(reshape2)
+library(treemapify)
+library(scales)
+```
+
+#Loading the Data set
+```{r,echo=FALSE}
+US<-read.csv('/Users/kailash/Downloads/pollution_us_2000_2016.csv')
+```
+
+
+#QUESTION-1:With the AQI’s of different gases how can we find the air quality of different states ? Does this predict which different state’s air quality has been affected the more in these years?
+```{r,echo=FALSE}
+#Air Quality Index(AQI)
+
+#Loading the Data
+US<-read.csv('/Users/kailash/Downloads/pollution_us_2000_2016.csv')
+
+#Using Seperate and Mutuate Function
+US1 <- separate(US,col= "Date.Local",into = c('Year','Month','Day'),sep="-")
+US1 <- mutate(US,US1)
+
+y1 <- c("2000","2001","2002","2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016")
+
+df1 <- US1  %>% filter(Year %in% y1) %>% 
+  group_by(Year) %>%  summarise(Avg = mean(NO2.AQI))
+
+p1<- ggplot(df1,aes(x=Year,y=Avg))  +
+  geom_bar(stat="identity", fill = "#FF6666") + ylab("NO2.AQI") +
+  ggtitle("Comparision between No2 AQI value for each year")
+p1
+
+df2 <- US1  %>% filter(Year %in% y1) %>% 
+  group_by(Year) %>%  summarise(Avg = mean(SO2.AQI,na.rm=TRUE)) 
+p2<- ggplot(df2,aes(x=Year,y=Avg))  +
+  geom_bar(stat="identity",fill ="#353436") + ylab("SO2.AQI")+
+  ggtitle("Comparision between So2 AQI value for each year")
+p2
+
+df3 <- US1  %>% filter(Year %in% y1) %>% 
+  group_by(Year) %>%  summarise(Avg = mean(CO.AQI,na.rm=TRUE))
+
+p3<- ggplot(df2,aes(x=Year,y=Avg))  +
+  geom_bar(stat="identity", fill = "#1b98e0") + ylab("CO.AQI") +
+  ggtitle("Comparision between Co AQI value for each year")
+p3
+
+df4 <- US1  %>% filter(Year %in% y1) %>% 
+  group_by(Year) %>%  summarise(Avg = mean(O3.AQI,na.rm=TRUE))
+
+p4<- ggplot(df2,aes(x=Year,y=Avg))  +
+  geom_bar(stat="identity", fill = "red") + ylab("O3.AQI") +
+  ggtitle("Comparision between O3 AQI value for each year")
+p4
+
+
+
+
+```
+#Conclusion:With these set of data we could find the states that has been more affected by NO2,SO2,CO,O3.Although these states has been much affected and has poor air quality this does not fall under the critical category provided the annual average is taken. But we do have certain areas specifically that fall under the danger zone of making the air quality poor which makes them uninhabitable.We will be discussing the later case in the upcoming one.
+
+
+#Hazardous Gases:
+#Q2:How can you find which gas is more hazardous making the air quality poor?
+```{r,echo=FALSE}
+
+B <- US1 %>% group_by(Date.Local, NO2.AQI, SO2.AQI,CO.AQI,O3.AQI)  %>%  
+  summarise(b = unique(Date.Local)) %>% 
+  arrange(desc(NO2.AQI, SO2.AQI, CO.AQI, O3.AQI)) %>% group_by(year(Date.Local)) %>%
+  summarise(mean1_no2 = mean(NO2.AQI), mean1_so2 = mean(SO2.AQI, na.rm = TRUE),
+            mean1_co = mean(CO.AQI, na.rm = TRUE), mean1_o3 = mean(O3.AQI)) 
+B_1 <- rename(B, YEAR = 'year(Date.Local)')
+
+names(B_1)[2] <- 'No2'
+names(B_1)[3] <- 'So2'
+names(B_1)[4] <- 'Co'
+names(B_1)[5] <- 'O3'
+
+Pivot <- B_1 %>% pivot_longer(cols = No2:O3,
+                      names_to = 'Gas',
+                      values_to = 'value')
+Plot_1 <- ggplot(Pivot,aes(x=YEAR,y=value, color = Gas))+
+          geom_line(stat="identity") +
+          ggtitle("Comparision between AQI Values of all gases")+
+          ylab("AQI.Value") +
+           theme(axis.text.x = element_text(angle = 90, size =6.5))
+
+Plot_1
+
+
+```
+#Conclusion:With the data provided in the data set ,the average value of the AQI for different gases provides us the trends of the four  gases in these years.From this we could find that the Ozone has more impact compared to the other gases.
+
+
+#Top 5 States contributing for the AQI
+#Q3:Find the top five states that contribute to the AQI Values for all the four gases.
+
+```{r, echo=FALSE}
+den <- US1 %>% select(State,Date.Local,NO2.AQI,O3.AQI,SO2.AQI,CO.AQI) %>% filter(State!='Country of Mexico') %>% 
+  group_by(State,Date.Local) %>% 
+      summarise(No2 = mean(NO2.AQI,na.rm=TRUE),
+                So2 = mean(SO2.AQI,na.rm=TRUE),
+                O3 = mean(O3.AQI,na.rm=TRUE),
+                Co = mean(CO.AQI,na.rm=TRUE)) %>% 
+pivot_longer(cols = No2:Co,
+             names_to = 'Gases',
+             values_to = 'AQI') %>% drop_na()
+
+den2 <- subset(den,den$State %in% head(unique(den$State),5))
+
+top <- ggplot(den2,aes(x=Gases,y=AQI,fill = State))+ geom_boxplot(outlier.colour="black", outlier.shape=2,
+                                                            outlier.size=1.5,notch=FALSE) +
+       ggtitle("AQI of various gas based on the top 5 state")
+top
+
+```
+#Conclusion:From the plot we can come to the conclusion that on an annual range all the top 5 states are in safe zone by being below 50 in AQI Value.However we can see that there are many outliers in every state which indicates that for some days the AQI falls above the safe level leading to air pollution.
+
+
+
+#Correlation of NO2 and O3:
+#Q4:How these two gases No2 and O3 correlated to each other for different seasons in a year? If we do have any relation between them what it is and plot a graph neatly to describe this correlation.
+
+```{r,echo=FALSE}
+#No2
+Correlation_1 <- US1 %>% group_by(Date.Local,NO2.Mean)  %>%  
+  summarise(b = unique(Date.Local)) %>% 
+  arrange(desc(NO2.Mean)) %>% group_by(month(Date.Local), year(Date.Local)) %>% 
+  summarise(NO2_mean = mean(NO2.Mean))
+Correlation_1_2 <- rename(Correlation_1, YEAR = `year(Date.Local)` )
+Correlation_1_2_3 <- rename(Correlation_1_2, Month = `month(Date.Local)` )
+
+Correlation_1_2000 <- Correlation_1_2_3 %>% filter(YEAR == "2000") 
+
+library(scales)
+plot_corr_2000_1 <- ggplot(data = Correlation_1_2000, aes(x = Month, y = NO2_mean)) +
+  geom_point(stat = "identity", color = "gold") + scale_x_discrete(limits = month.name) +
+  ggtitle("Comparision between No2 mean for each month") +
+  theme(axis.text.x = element_text(angle = 90, size =6.5))
+plot_corr_2000_1
+
+#O3
+
+Correlation_2 <- US1 %>% group_by(Date.Local,O3.Mean)  %>%  
+  summarise(b = unique(Date.Local)) %>% 
+  arrange(desc(O3.Mean)) %>% group_by(month(Date.Local), year(Date.Local)) %>% 
+  summarise(O3_mean = mean(O3.Mean, na.rm = TRUE))
+Correlation_2_1 <- rename(Correlation_2, YEAR = `year(Date.Local)` )
+Correlation_2_2 <- rename(Correlation_2_1, Month = `month(Date.Local)` )
+
+Correlation_2_2000 <- Correlation_2_2 %>% filter(YEAR == "2000") 
+
+plot_corr_2000_2 <- ggplot(data = Correlation_2_2000, aes(x = Month, y = O3_mean)) +
+  geom_point(stat = "identity", color = "red") + scale_x_discrete(limits = month.name) +
+  ggtitle("Comparision between No2 mean for each month") +
+  theme(axis.text.x = element_text(angle = 90, size =6.5))
+plot_corr_2000_2 
+
+#Grid_arrange
+Corr_grid_arrange <- grid.arrange(plot_corr_2000_1, plot_corr_2000_2, ncol = 2) 
+
+```
+#Conclusion:From the scatter plot above we can find that the data shows variations in monthly average NO2 and O3 concentrations.The monthly average O3 concentration varies mainly in summer. Monthly mean O3 values displayed summer highs with a gradual decline into spring (March to August) and winter lows (December to February).Trends observed for NO and NO2 consisted of a winter peak and summer minima.This enhanced seasonality of NO levels in winter may be partly attributed to increased fossil fuels for domestic heating and driving. Therefore, anthropogenic sources seem to play a greater role in NO build-up than local meteorological conditions in winter; NO from traffic emissions is converted to NO2 while the formation of O3 is inhibited by the lack of intense solar radiation.
+
+
+#Correlation between So2 and CO
+#Question-5:How these two gases So2 and CO are correlated to each other for different seasons in a year? If we do have any relation between them what it is and plot a graph neatly to describe this correlation.
+
+```{r,echo=FALSE}
+
+#So2
+
+Correlation_SO2 <- US1 %>% group_by(Date.Local,SO2.Mean) %>%  
+  summarise(b = unique(Date.Local)) %>% 
+  arrange(desc(SO2.Mean)) %>% group_by(month(Date.Local), year(Date.Local)) %>% 
+  summarise(SO2_mean = mean(SO2.Mean))
+Correlation_SO2_1 <- rename(Correlation_SO2, YEAR = `year(Date.Local)` )
+Correlation_SO2_2 <- rename(Correlation_SO2_1, Month = `month(Date.Local)` )
+
+Correlation_so2_2000 <- Correlation_SO2_2 %>% filter(YEAR == "2000") 
+
+library(scales)
+plot_cor_2000_1 <- ggplot(data = Correlation_so2_2000, aes(x = Month, y = SO2_mean)) +
+  geom_bar(stat = "identity", fill = "yellow") + scale_x_discrete(limits = month.name) +
+  theme(axis.text.x = element_text(angle = 90, size =6.5)) +
+  ggtitle("Mean of So2 in the year 2000 based on month")
+plot_cor_2000_1
+
+#Co
+
+Correlation_Co <- US1 %>% group_by(Date.Local,CO.Mean)  %>%  
+                  summarise(b = unique(Date.Local)) %>% 
+                  arrange(desc(CO.Mean)) %>% 
+                  group_by(month(Date.Local), year(Date.Local)) %>% 
+                  summarise(CO_mean = mean(CO.Mean, na.rm = TRUE))
+Correlation_Co_1 <- rename(Correlation_Co, YEAR = `year(Date.Local)` )
+Correlation_Co_2 <- rename(Correlation_Co_1, Month = `month(Date.Local)` )
+
+Correlation_Co_2000 <- Correlation_Co_2 %>% filter(YEAR == "2000") 
+
+plot_cor_2000_2 <- ggplot(data = Correlation_Co_2000, aes(x = Month, y = CO_mean)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "green") + 
+  scale_x_discrete(limits = month.name) +
+  theme(axis.text.x = element_text(angle = 90, size =6.5)) +
+  ggtitle("Mean of Co in the year 2000 based on month")
+plot_cor_2000_2 
+
+#Arranging in the grid
+library(gridExtra)
+plotting_grid <- grid.arrange(plot_cor_2000_1, plot_cor_2000_2, ncol = 2)
+
+```
+#Conclusion:From these data plots we can clearly see that these both gases has their maximum values during the winter months(November,December,January) leading to the air pollution during winter season.Additionally this plot also provides us the insight that particles that form smog come in different flavors , the important one is sulfates, from sulfur dioxide emitted mainly by coal-fired power plants.EPA has to take some preventive measures to reduce this during the winter season.
+
+
+#Maximum Impact of Gases:
+#Q6:How can you find the different states affected by the maximum value of four different gases?
+
+```{r,echo=FALSE}
+
+
+#Max_No2
+max_no2_value <- US1 %>% group_by(State,Date.Local,NO2.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(NO2.1st.Max.Value)) %>% 
+  group_by(State, year(Date.Local)) %>% summarise(max_no2 = mean(NO2.1st.Max.Value))
+max_no2_value_1 <- rename(max_no2_value, YEAR = 'year(Date.Local)') 
+
+Max_No2 <- ggplot(data = max_no2_value_1, 
+                  aes(x = reorder(State, max_no2, sum), 
+                      y = max_no2, fill = YEAR)) + coord_flip() +
+            geom_bar(stat = "identity") + ylab('max_No2_(ppm)') +
+            ggtitle("Max No2 value for each State based on each year ") +
+            theme(axis.text.x = element_text(angle = 90, size =6.5))
+Max_No2
+
+#Max_So2
+
+max_So2_value <- US1%>% group_by(State,Date.Local,SO2.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(SO2.1st.Max.Value)) %>% 
+  group_by(State, year(Date.Local)) %>% summarise(max_so2 = mean(SO2.1st.Max.Value))
+max_so2_value_1 <- rename(max_So2_value, YEAR = 'year(Date.Local)') 
+
+Max_So2<- ggplot(data = max_so2_value_1, 
+                   aes(x = reorder(State,max_so2, sum), 
+                       y = max_so2, fill = YEAR)) + coord_flip() +
+            geom_bar(stat = "identity") + ylab('max_so2_(ppb)') +
+            ggtitle("Maximum Value for So2 for each state and each year") +
+            theme(axis.text.x = element_text(angle = 90, size =6.5))
+Max_So2
+
+#Max_Co
+
+max_Co_value <- US1 %>% group_by(State,Date.Local,CO.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(CO.1st.Max.Value)) %>% 
+  group_by(State, year(Date.Local)) %>% summarise(max_co = mean(CO.1st.Max.Value))
+max_Co_value_1 <- rename(max_Co_value, YEAR = 'year(Date.Local)') 
+
+Max_Co <- ggplot(data = max_Co_value_1, 
+                   aes(x = reorder(State,max_co, sum), 
+                       y = max_co, fill = YEAR)) + coord_flip() +
+           geom_bar(stat = "identity") + ylab('max_co_(ppm)') +
+          ggtitle("Maximum Value for Co for each state and each year")+
+           theme(axis.text.x = element_text(angle = 90, size =6.5))
+Max_Co
+
+
+#Max_O3
+
+max_O3_value <- US1 %>% group_by(State,Date.Local,O3.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(O3.1st.Max.Value)) %>% 
+  group_by(State, year(Date.Local)) %>% summarise(max_o3 = mean(O3.1st.Max.Value))
+max_O3_value_1 <- rename(max_O3_value, YEAR = 'year(Date.Local)') 
+
+Max_O3 <- ggplot(data = max_O3_value_1, 
+                  aes(x = reorder(State,max_o3, sum), 
+                      y = max_o3, fill = YEAR)) + coord_flip() +
+           geom_bar(stat = "identity") + ylab('max_o3_(ppm)') +
+           ggtitle("Maximum Value for O3 for each state and each year")
+           theme(axis.text.x = element_text(angle = 90, size =6.5))
+Max_O3
+  
+
+
+```
+#Conclusion:From the bar plot, it seems that the different gases has different impacts on different states.The maximum value of gases provides the sum of maximum values in each state through out all these 17 years.
+
+
+#Major Contributing Cities in Top 5 States
+#Q7:Find the major contributing cities in the Top 5 States for all the four different gases
+
+```{r,echo=FALSE}
+
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+
+
+#Max_No2_state
+max_no2_value_state <- US1 %>% group_by(State,County,City,Date.Local,NO2.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(NO2.1st.Max.Value)) %>% 
+  group_by(State,County,City,year(Date.Local)) %>% summarise(max_no2_state = mean(NO2.1st.Max.Value))
+max_no2_value_state_1 <- rename(max_no2_value_state, YEAR = 'year(Date.Local)') 
+X <- subset(max_no2_value_state_1,max_no2_value_state_1$State %in% head(unique(max_no2_value_state_1$State),5))
+gc_no2 <- X %>% group_by(State, City) %>%  summarise(f = mean(max_no2_state)) %>% arrange(desc(f))
+library(treemapify)
+plot_no2_state <-  ggplot(gc_no2, aes(area=f, label=City,
+                                   fill=State,subgroup=State)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre", grow=FALSE) +
+  ggtitle("No2 Major contributing cities in top 5 state")
+plot_no2_state
+
+
+#Max_so2_state
+
+max_so2_value_state <- US1 %>% group_by(State,County,City,Date.Local,SO2.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(SO2.1st.Max.Value)) %>% 
+  group_by(State,County,City,year(Date.Local)) %>% summarise(max_so2_state = mean(SO2.1st.Max.Value))
+max_so2_value_state_1 <- rename(max_so2_value_state, YEAR = 'year(Date.Local)') 
+X1 <- subset(max_so2_value_state_1,max_so2_value_state_1$State %in% head(unique(max_so2_value_state_1$State),5))
+gc_so2 <- X1 %>% group_by(State, City) %>%  summarise(m = mean(max_so2_state)) %>% arrange(desc(m))
+library(treemapify)
+plot_so2_state <-  ggplot(gc_so2, aes(area=m, label=City,
+                                   fill=State,subgroup=State)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre", grow=FALSE)+
+  ggtitle("So2 Major contributing cities in top 5 state")
+plot_so2_state
+
+
+#Max Co value
+max_co_value_state <- US1 %>% group_by(State,County,City,Date.Local,CO.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(CO.1st.Max.Value)) %>% 
+  group_by(State,County,City,year(Date.Local)) %>% summarise(max_co_state = mean(CO.1st.Max.Value))
+max_co_value_state_1 <- rename(max_co_value_state, YEAR = 'year(Date.Local)') 
+X2 <- subset(max_co_value_state_1,max_co_value_state_1$State %in% head(unique(max_co_value_state_1$State),5))
+gc_co <- X2 %>% group_by(State, City) %>%  summarise(n = mean(max_co_state)) %>% arrange(desc(n))
+library(treemapify)
+plot_co_state <-  ggplot(gc_co, aes(area=n, label=City,
+                                      fill=State,subgroup=State)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre", grow=FALSE) +
+  ggtitle("Co Major contributing cities in top 5 state")
+plot_co_state
+
+#Max O3 Value
+
+max_o3_value_state <- US1 %>% group_by(State,County,City,Date.Local,O3.1st.Max.Value) %>%  
+  summarise(a = unique(Date.Local)) %>% arrange(desc(O3.1st.Max.Value)) %>% 
+  group_by(State,County,City,year(Date.Local)) %>% summarise(max_o3_state = mean(O3.1st.Max.Value))
+max_o3_value_state_1 <- rename(max_o3_value_state, YEAR = 'year(Date.Local)') 
+X3 <- subset(max_o3_value_state_1,max_o3_value_state_1$State %in% head(unique(max_o3_value_state_1$State),5))
+gc_o3 <- X3 %>% group_by(State, City) %>%  summarise(o3 = mean(max_o3_state)) %>% arrange(desc(o3))
+library(treemapify)
+plot_o3_state <-  ggplot(gc_o3, aes(area=o3, label=City,
+                                    fill=State,subgroup=State)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre", grow=FALSE)+
+  ggtitle("O3 Major contributing cities in top 5 state")
+plot_o3_state
+
+
+```
+#Conclusuin : 6. From the tree-map we can find that the cities of California has contributed more to the air pollution for all the five gases.Additionally Arizona is in the second place contributing majorly for all the four gas leading to air pollution.
+
+
+#Conclusion : 
+
+1. The conclusion we got from AQI(Air Quality Index) column from data set is that we could find states that has been more affected by NO2,SO2,CO,O3.Although these states has been much affected and has poor air quality this does not fall under the critical category provided the annual average is taken. But we do have certain areas specifically that fall under the danger zone of making the air quality poor which makes them uninhabitable.We will be discussing the later case in the upcoming one.
+2. The interpretation we received from bar plot is that it seems that the different gases has different impacts on different states.The maximum value of gases provides the sum of maximum values in each state through out all these 17 years.
+3. The interpretation we received from the scatter plot is that we can find that the data shows variations in monthly average NO2 and O3 concentrations.The monthly average O3 concentration varies mainly in summer. Monthly mean O3 values displayed summer highs with a gradual decline into spring (March to August) and winter lows (December to February). The trends we observed for NO and NO2 consisted of a winter peak and summer minimum.This enhanced seasonality of NO levels in winter may be partly attributed to increased fossil fuels for domestic heating and driving. Therefore, anthropogenic sources seem to play a greater role in NO build-up than local meteorological conditions in winter; NO from traffic emissions is converted to NO2 while the formation of O3 is inhibited by the lack of intense solar radiation.
+4. The conclusion we got from the provided in the data set, the average value of the AQI for different gases provides us the trends of the four gases in these years.From this we could find that the Ozone has more impact compared to the other gases.
+5. The conclusion we got from the box plot that we can come to know that on an annual range all the top 5 states are in safe zone by being below 50 in AQI Value.However we can see that there are many outliers in every state which indicates that for some days the AQI falls above the safe level leading to air pollution.
+6. The interpretation from the tree-map we can find that the cities of California has contributed more to the air pollution for all the five gases.Additionally Arizona is in the second place contributing majorly for all the four gas leading to air pollution.
+7. From these data plots we can clearly conclude that these both gases has their maximum values during the winter months(November,December,January) leading to the air pollution during winter season.Additionally this plot also provides us the insight that particles that form smog come in different flavors , the important one is sulfates, from sulfur dioxide emitted mainly by coal-fired power plants.EPA has to take some preventive measures to reduce this during the winter season.
+
+
